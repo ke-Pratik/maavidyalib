@@ -1,0 +1,53 @@
+package com.studycenter.repository;
+
+import com.studycenter.entity.FeeRecord;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface FeeRecordRepository extends JpaRepository<FeeRecord, Long> {
+
+    boolean existsByRegNoAndFeeMonthAndFeeYear(Long regNo, Integer feeMonth, Integer feeYear);
+
+    Optional<FeeRecord> findByRegNoAndFeeMonthAndFeeYear(Long regNo, Integer feeMonth, Integer feeYear);
+
+    List<FeeRecord> findByRegNoOrderByFeeYearDescFeeMonthDesc(Long regNo);
+
+    List<FeeRecord> findByFeeMonthAndFeeYear(Integer feeMonth, Integer feeYear);
+
+    List<FeeRecord> findByPaymentDateBetween(LocalDate startDate, LocalDate endDate);
+
+    @Query("SELECT COALESCE(SUM(f.finalFee), 0) FROM FeeRecord f WHERE f.feeMonth = :month AND f.feeYear = :year")
+    BigDecimal sumFinalFeeByMonth(@Param("month") Integer month, @Param("year") Integer year);
+
+    @Query("SELECT COALESCE(SUM(f.paidAmount), 0) FROM FeeRecord f WHERE f.feeMonth = :month AND f.feeYear = :year")
+    BigDecimal sumPaidAmountByMonth(@Param("month") Integer month, @Param("year") Integer year);
+
+    @Query("SELECT COALESCE(SUM(f.balanceAmount), 0) FROM FeeRecord f WHERE f.feeMonth = :month AND f.feeYear = :year")
+    BigDecimal sumBalanceByMonth(@Param("month") Integer month, @Param("year") Integer year);
+
+    @Query("SELECT COALESCE(SUM(f.paidAmount), 0) FROM FeeRecord f WHERE f.feeMonth = :month AND f.feeYear = :year AND f.paymentMode = :mode")
+    BigDecimal sumPaidAmountByMonthAndMode(@Param("month") Integer month, @Param("year") Integer year, @Param("mode") String mode);
+
+    @Query("SELECT COALESCE(SUM(f.finalFee), 0) FROM FeeRecord f WHERE f.paymentDate BETWEEN :start AND :end")
+    BigDecimal sumFinalFeeByDateRange(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(f.paidAmount), 0) FROM FeeRecord f WHERE f.paymentDate BETWEEN :start AND :end")
+    BigDecimal sumPaidAmountByDateRange(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(f.balanceAmount), 0) FROM FeeRecord f WHERE f.paymentDate BETWEEN :start AND :end")
+    BigDecimal sumBalanceByDateRange(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(f.paidAmount), 0) FROM FeeRecord f WHERE f.paymentDate BETWEEN :start AND :end AND f.paymentMode = :mode")
+    BigDecimal sumPaidAmountByDateRangeAndMode(@Param("start") LocalDate start, @Param("end") LocalDate end, @Param("mode") String mode);
+
+    @Query("SELECT COUNT(f) FROM FeeRecord f WHERE f.feeMonth = :month AND f.feeYear = :year AND f.receiptNumber IS NOT NULL")
+    long countReceiptsByMonthAndYear(@Param("month") Integer month, @Param("year") Integer year);
+}
