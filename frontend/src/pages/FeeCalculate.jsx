@@ -158,7 +158,10 @@ function FeeCalculate() {
       return;
     }
     try {
-      const res = await axios.get("http://localhost:8080/api/students/active");
+      const res = await axios.get(
+  `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api"}/students/active`
+);
+      //const res = await axios.get("http://localhost:8080/api/students/active");
       const student = res.data.find((s) => s.regNo === Number(studentRegNo));
       if (student) {
         setStudentInfo(student);
