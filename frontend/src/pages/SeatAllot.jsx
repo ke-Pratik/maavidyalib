@@ -45,8 +45,9 @@ function SeatAllot() {
 
       // Try to get inTime/outTime from active students list
       const stuRes = await axios.get(
-        "http://localhost:8080/api/students/active",
+         `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api"}/students/active`
       );
+    //  const stuRes = await axios.get("http://localhost:8080/api/students/active",);
       const student = stuRes.data.find((s) => s.regNo === Number(form.regNo));
 
       if (student && student.inTime && student.outTime) {
