@@ -15,8 +15,10 @@ export const deactivateStudent = (data) =>
   API.put("/students/deactivate", data);
 export const reactivateStudent = (data) =>
   API.put("/students/reactivate", data);
-export const searchStudents = (name) =>
-  API.get("/students/search", { params: { name } }); // NEW
+//export const searchStudents = (name) =>
+  //API.get("/students/search", { params: { name } }); // NEW
+export const searchStudents = (type, value) =>
+  API.get("/students/search", { params: { type, value } });
 
 // ═══════════════════════════════════════════
 // SEAT APIs
