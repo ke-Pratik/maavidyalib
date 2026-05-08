@@ -22,4 +22,8 @@ public class SeatAvailabilityResponse {
     private boolean isAvailable;
     private String message;
     private List<String> existingBookings;
+    private String studentName;
+    private Long regNo;
+    private String occupiedTimeSlot;
+    private String bookingDate;
 }
