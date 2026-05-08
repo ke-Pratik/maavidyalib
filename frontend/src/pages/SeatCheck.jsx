@@ -81,10 +81,15 @@ function SeatCheck() {
           </button>
         </form>
       </div>
-
-      {result && (
+       {result && (
         <div
-          className={`result-card mt-4 ${result.available ? "success" : result.status === "GENDER_NOT_ALLOWED" ? "warning" : "error"}`}
+          className={`result-card mt-4 ${
+            result.available
+              ? "success"
+              : result.status === "GENDER_NOT_ALLOWED"
+                ? "warning"
+                : "error"
+          }`}
         >
           <h5 className="fw-bold">
             {result.available
@@ -93,12 +98,43 @@ function SeatCheck() {
                 ? "🚫 GENDER NOT ALLOWED"
                 : "❌ SEAT NOT VACANT"}
           </h5>
+
           <p>
             <strong>Zone:</strong> {result.zone}
           </p>
+
           <p>
             <strong>Message:</strong> {result.message}
           </p>
+
+          {/* NEW OCCUPIED SEAT DETAILS */}
+          {!result.available && result.status !== "GENDER_NOT_ALLOWED" && (
+            <div className="mt-3">
+              <table className="table table-sm table-bordered">
+                <tbody>
+                  <tr>
+                    <td className="fw-bold">Student Name</td>
+                    <td>{result.studentName || "-"}</td>
+                  </tr>
+
+                  <tr>
+                    <td className="fw-bold">Reg No</td>
+                    <td>{result.regNo || "-"}</td>
+                  </tr>
+
+                  <tr>
+                    <td className="fw-bold">Occupied Time</td>
+                    <td>{result.occupiedTimeSlot || "-"}</td>
+                  </tr>
+
+                  <tr>
+                    <td className="fw-bold">Booking Date</td>
+                    <td>{result.bookingDate || "-"}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -106,3 +142,6 @@ function SeatCheck() {
 }
 
 export default SeatCheck;
+
+
+      
