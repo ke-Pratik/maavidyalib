@@ -304,7 +304,6 @@ public class SeatService {
                 outTime
         );
     }
-
     // Otherwise → all vacant seats
     return getVacantSeats(
             gender,
