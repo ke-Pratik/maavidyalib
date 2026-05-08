@@ -31,6 +31,11 @@ export const cancelBooking = (bookingId) =>
   API.delete(`/seats/cancel/${bookingId}`);
 export const getStudentBookings = (regNo) => API.get(`/seats/student/${regNo}`);
 
+export const checkSeatAvailability = (params) =>
+  API.get("/seats/availability", {
+    params,
+  });
+
 // ═══════════════════════════════════════════
 // FEE APIs
 // ═══════════════════════════════════════════
