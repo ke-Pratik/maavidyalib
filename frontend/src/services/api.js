@@ -15,8 +15,6 @@ export const deactivateStudent = (data) =>
   API.put("/students/deactivate", data);
 export const reactivateStudent = (data) =>
   API.put("/students/reactivate", data);
-//export const searchStudents = (name) =>
-  //API.get("/students/search", { params: { name } }); // NEW
 export const searchStudents = (type, value) =>
   API.get("/students/search", { params: { type, value } });
 
@@ -30,7 +28,6 @@ export const allotSeat = (data) => API.post("/seats/allot", data);
 export const cancelBooking = (bookingId) =>
   API.delete(`/seats/cancel/${bookingId}`);
 export const getStudentBookings = (regNo) => API.get(`/seats/student/${regNo}`);
-
 export const checkSeatAvailability = (params) =>
   API.get("/seats/availability", {
     params,
@@ -41,6 +38,7 @@ export const checkSeatAvailability = (params) =>
 // ═══════════════════════════════════════════
 export const previewFee = (data) => API.post("/fees/preview", data);
 export const lockFee = (data) => API.post("/fees/lock", data);
+export const autoGenerateFee      = (regNo)  => API.post(`/fees/auto-generate/${regNo}`);
 export const recordPayment = (data) => API.post("/fees/pay", data);
 export const getStudentFeeStatus = (regNo) => API.get(`/fees/student/${regNo}`);
 export const getAllFeeStatus = (params) => API.get("/fees/status", { params });
