@@ -7,10 +7,10 @@ public class SeatConfig {
 
     private static final int TOTAL_SEATS = 65;
     private static final int BOYS_START = 1;
-    private static final int BOYS_END = 25;
-    private static final int GIRLS_START = 26;
-    private static final int GIRLS_END = 40;
-    private static final int COMMON_START = 41;
+    private static final int BOYS_END = 17;
+    private static final int GIRLS_START = 18;
+    private static final int GIRLS_END = 30;
+    private static final int COMMON_START = 31;
     private static final int COMMON_END = 65;
 
     public int getTotalSeats() {
