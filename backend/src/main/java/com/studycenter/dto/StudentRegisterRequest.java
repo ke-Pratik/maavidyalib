@@ -36,7 +36,10 @@ public class StudentRegisterRequest {
     @NotBlank(message = "dateOfAdmission is required")
     private String dateOfAdmission;
 
+   // To:
+    @NotBlank(message = "inTime is required")
     private String inTime;
 
+    @NotBlank(message = "outTime is required")
     private String outTime;
 }
