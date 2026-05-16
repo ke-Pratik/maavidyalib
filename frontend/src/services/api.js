@@ -32,7 +32,8 @@ API.interceptors.response.use(
 // STUDENT APIs
 // ═══════════════════════════════════════════
 export const registerStudent = (data) => API.post("/students/register", data);
-export const getActiveStudents = () => API.get("/students/active");
+export const getActiveStudents = (params) => API.get("/students/active", { params });
+//export const getActiveStudents = () => API.get("/students/active");
 export const getInactiveStudents = () => API.get("/students/inactive");
 export const getStudentSummary = () => API.get("/students/summary");
 export const deactivateStudent = (data) =>
