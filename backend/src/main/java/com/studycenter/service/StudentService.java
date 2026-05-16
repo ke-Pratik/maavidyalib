@@ -224,4 +224,40 @@ public class StudentService {
                 .remarks(s.getRemarks())
                 .build();
     }
+    
+    public ActiveStudentsPageResponse getActiveStudentsPaged(int page, int size) {
+        LocalDate today = LocalDate.now();
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ActiveStudentProjection> result = studentRepository.findActiveStudentsWithDetails(
+                today.getMonthValue(), today.getYear(), pageable);
+
+        List<ActiveStudentDto> students = result.getContent().stream()
+                .map(this::mapProjectionToDto)
+                .toList();
+
+        return ActiveStudentsPageResponse.builder()
+                .students(students)
+                .page(result.getNumber())
+                .size(result.getSize())
+                .totalElements(result.getTotalElements())
+                .totalPages(result.getTotalPages())
+                .build();
+    }
+    private ActiveStudentDto mapProjectionToDto(ActiveStudentProjection p) {
+        String timeSlot = null;
+        if (p.getInTime() != null && p.getOutTime() != null) {
+            timeSlot = p.getInTime().format(TIME_FMT) + " - " + p.getOutTime().format(TIME_FMT);
+        }
+        return ActiveStudentDto.builder()
+                .regNo(p.getRegNo())
+                .name(p.getName())
+                .gender(p.getGender())
+                .mobile(p.getMobile())
+                .seatNo(p.getSeatNo() != null ? p.getSeatNo() : 0)
+                .timeSlot(timeSlot)
+                .feeStatus(p.getFeeStatus())
+                .dateOfAdmission(p.getDateOfAdmission() != null ? p.getDateOfAdmission().toString() : null)
+                .build();
+    }
+
 }
