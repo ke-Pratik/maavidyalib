@@ -110,6 +110,9 @@ function Sidebar() {
         >
           <FaChartBar className="me-2" /> Collection Report
         </NavLink>
+       <NavLink to="/receipt-search" className={...}>
+       🖨️ Receipt Reprint
+      </NavLink>
       </div>
 
       {/* Logout Button */}
