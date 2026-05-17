@@ -101,6 +101,9 @@ function Sidebar() {
         >
           <FaClipboardList className="me-2" /> All Fee Status
         </NavLink>
+        <NavLink to="/bulk-payment" className={...}>
+        💼 Bulk Payment
+        </NavLink>
         <NavLink
           to="/fees/collection"
           className={({ isActive }) => (isActive ? "active" : "")}
