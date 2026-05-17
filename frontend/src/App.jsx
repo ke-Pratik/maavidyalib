@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import BulkPayment from "./pages/BulkPayment";
 
 import Login          from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -41,6 +42,7 @@ function AppLayout() {
             <Route path="/fees/pay"          element={<FeePayment />} />
             <Route path="/fees/student"      element={<StudentFeeStatus />} />
             <Route path="/fees/status"       element={<AllFeeStatus />} />
+            <Route path="/bulk-payment" element={<BulkPayment />} />
             <Route path="/fees/collection"   element={<CollectionReport />} />
           </Routes>
         </main>
