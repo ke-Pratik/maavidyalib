@@ -699,4 +699,38 @@ public class FeeService {
         long count = feeRecordRepository.countReceiptsByMonthAndYear(month, year);
         return String.format("REC-%d-%02d-%03d", year, month, count + 1);
     }
+    
+    // ─── E7: Get receipt by receipt number ───────────────────────────────────
+public ReceiptResponse getReceipt(String receiptNumber) {
+    FeeRecord record = feeRecordRepository.findByReceiptNumber(receiptNumber)
+        .orElseThrow(() -> new InvalidRequestException(
+            "No receipt found with number: " + receiptNumber));
+
+    Student student = studentRepository.findById(record.getRegNo())
+        .orElseThrow(() -> new StudentNotFoundException(
+            "Student not found for reg no: " + record.getRegNo()));
+
+    String timeSlot = null;
+    if (student.getInTime() != null && student.getOutTime() != null) {
+        timeSlot = student.getInTime().format(TIME_FMT)
+                 + " - "
+                 + student.getOutTime().format(TIME_FMT);
+    }
+
+    return ReceiptResponse.builder()
+        .receiptNumber(record.getReceiptNumber())
+        .regNo(record.getRegNo())
+        .studentName(student.getName())
+        .feeMonth(record.getFeeMonth())
+        .feeYear(record.getFeeYear())
+        .finalFee(record.getFinalFee())
+        .amountPaid(record.getPaidAmount())
+        .balanceAmount(record.getBalanceAmount())
+        .paymentStatus(record.getPaymentStatus())
+        .paymentMode(record.getPaymentMode())
+        .paymentDate(record.getPaymentDate() != null
+            ? record.getPaymentDate().toString() : null)
+        .timeSlot(timeSlot)
+        .build();
+}
 }
