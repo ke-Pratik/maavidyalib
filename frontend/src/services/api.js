@@ -75,10 +75,8 @@ export const getCollectionByRange = (params) =>
 export const generateAllFees = (params) =>
   API.post("/fees/generate-all", null, { params });
 // ── ENHANCEMENTS #3–6 ──────────────────────────────────────────────
-export const bulkPayment = (data) => API.post("/fees/bulk-payment", data);
-export const getReceipt = (receiptNumber) =>
-  API.get(`/fees/receipt/${receiptNumber}`);
 export const getStudentsWithNoConfig = () => API.get("/fees/no-config");
+export const bulkPayment = (data) => API.post("/fees/bulk-payment", data);
 export const reversePayment = (feeId, data) =>
   API.post(`/fees/reverse/${feeId}`, data);
 export const getReceipt = (receiptNumber) =>
