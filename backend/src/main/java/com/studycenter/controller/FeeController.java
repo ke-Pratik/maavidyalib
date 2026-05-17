@@ -110,4 +110,11 @@ public class FeeController {
         String remarks = req != null ? req.getRemarks() : null;
         return ResponseEntity.ok(feeService.reversePayment(feeId, remarks));
     }
+
+    // E7
+    @GetMapping("/receipt/{receiptNumber}")
+    public ResponseEntity<ReceiptResponse> getReceipt(
+            @PathVariable String receiptNumber) {
+        return ResponseEntity.ok(feeService.getReceipt(receiptNumber));
+    }
 }
