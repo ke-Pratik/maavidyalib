@@ -14,6 +14,8 @@ import {
   FaClipboardList,
   FaChartBar,
   FaSignOutAlt,
+  FaLayerGroup,   // ← Bulk Payment icon
+  FaPrint,        // ← Receipt Reprint icon
 } from "react-icons/fa";
 
 function Sidebar() {
@@ -101,18 +103,18 @@ function Sidebar() {
         >
           <FaClipboardList className="me-2" /> All Fee Status
         </NavLink>
-        <NavLink to="/bulk-payment" className={...}>
-        💼 Bulk Payment
-        </NavLink>
         <NavLink
-          to="/fees/collection"
+          to="/fees/bulk-payment"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaChartBar className="me-2" /> Collection Report
+          <FaLayerGroup className="me-2" /> Bulk Payment
         </NavLink>
-       <NavLink to="/receipt-search" className={...}>
-       🖨️ Receipt Reprint
-      </NavLink>
+        <NavLink
+          to="/receipt-search"
+          className={({ isActive }) => (isActive ? "active" : "")}
+        >
+          <FaPrint className="me-2" /> Receipt Reprint
+        </NavLink>
       </div>
 
       {/* Logout Button */}
