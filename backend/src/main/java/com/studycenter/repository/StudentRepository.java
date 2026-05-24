@@ -34,49 +34,44 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     // Existing query — Active Students page with seat + fee status
     @Query(
-            value = "SELECT " +
-                    "  s.reg_no        AS regNo, " +
-                    "  s.name          AS name, " +
-                    "  s.gender        AS gender, " +
-                    "  s.mobile        AS mobile, " +
-                    "  COALESCE( " +
-                    "    (SELECT sb.seat_no FROM seat_bookings sb " +
-                    "     WHERE sb.reg_no = s.reg_no " +
-                    "     ORDER BY sb.seat_no ASC LIMIT 1), " +
-                    "    0) AS seatNo, " +
-                    "  s.in_time       AS inTime, " +
-                    "  s.out_time      AS outTime, " +
-                    "  CASE " +
-                    "    WHEN EXISTS ( " +
-                    "      SELECT 1 FROM fee_records fr " +
-                    "      WHERE fr.reg_no = s.reg_no " +
-                    "      AND fr.fee_month = :month AND fr.fee_year = :year " +
-                    "    ) " +
-                    "    THEN " +
-                    "      CASE " +
-                    "        WHEN ( " +
-                    "          SELECT fr.balance_amount FROM fee_records fr " +
-                    "          WHERE fr.reg_no = s.reg_no " +
-                    "          AND fr.fee_month = :month AND fr.fee_year = :year " +
-                    "          ORDER BY fr.fee_id DESC LIMIT 1 " +
-                    "        ) > 0 " +
-                    "        THEN 'DUES' " +
-                    "        ELSE 'PAID' " +
-                    "      END " +
-                    "    ELSE 'DUES' " +
-                    "  END AS feeStatus, " +
-                    "  s.date_of_admission AS dateOfAdmission " +
-                    "FROM students s " +
-                    "WHERE s.is_active = true " +
-                    "ORDER BY s.reg_no ASC",
-            countQuery = "SELECT COUNT(*) FROM students WHERE is_active = true",
-            nativeQuery = true
-    )
-    Page<ActiveStudentProjection> findActiveStudentsWithDetails(
-            @Param("month") int month,
-            @Param("year") int year,
-            Pageable pageable);
-
+        value = "SELECT " +
+                "  s.reg_no        AS regNo, " +
+                "  s.name          AS name, " +
+                "  s.gender        AS gender, " +
+                "  s.mobile        AS mobile, " +
+                "  COALESCE( " +
+                "    (SELECT sb.seat_no FROM seat_bookings sb " +
+                "     WHERE sb.reg_no = s.reg_no " +
+                "     ORDER BY sb.seat_no ASC LIMIT 1), " +
+                "    0) AS seatNo, " +
+                "  s.in_time       AS inTime, " +
+                "  s.out_time      AS outTime, " +
+                "  CASE " +
+                "    WHEN EXISTS ( " +
+                "      SELECT 1 FROM fee_records fr " +
+                "      WHERE fr.reg_no = s.reg_no " +
+                "      AND fr.fee_month = :month AND fr.fee_year = :year " +
+                "    ) " +
+                "    THEN ( " +
+                "      SELECT fr.payment_status FROM fee_records fr " +
+                "      WHERE fr.reg_no = s.reg_no " +
+                "      AND fr.fee_month = :month AND fr.fee_year = :year " +
+                "      ORDER BY fr.fee_id DESC LIMIT 1 " +
+                "    ) " +
+                "    ELSE 'DUES' " +
+                "  END AS feeStatus, " +
+                "  s.date_of_admission AS dateOfAdmission " +
+                "FROM students s " +
+                "WHERE s.is_active = true " +
+                "ORDER BY s.reg_no ASC",
+        countQuery = "SELECT COUNT(*) FROM students WHERE is_active = true",
+        nativeQuery = true
+)
+Page<ActiveStudentProjection> findActiveStudentsWithDetails(
+        @Param("month") int month,
+        @Param("year") int year,
+        Pageable pageable);
+   
     // ── ENHANCEMENT #3: LEFT JOIN all active students with fee_records ────────
     // Returns all active students — fee columns are NULL when no record exists.
     // Database does the join. DB-agnostic: plain LEFT JOIN works on MySQL + PostgreSQL.
