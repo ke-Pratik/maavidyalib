@@ -417,9 +417,11 @@ function ActiveStudents() {
                             </div>
                           )}
 
+                         {!editResult.assignedSeatNo && (
                           <div className="alert alert-info py-2 small">
                             🪑 Seat bookings were cancelled. Please re-allot a seat for this student.
                           </div>
+                        )}
                         </div>
                       )}
                     </div>
