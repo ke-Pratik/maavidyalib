@@ -177,6 +177,8 @@ function ActiveStudents() {
                         <div className="d-flex gap-2">
                           <button className="btn btn-sm btn-outline-primary" onClick={() => openEdit(s)}>✏️ Edit</button>
                           <button className="btn btn-sm btn-outline-danger"  onClick={() => openDeactivate(s)}>🔴 Deactivate</button>
+                          <button className="btn btn-sm btn-outline-warning" onClick={() => openSlotChange(s)}>🕐 Slot</button>
+                          <button className="btn btn-sm btn-outline-success" onClick={() => openAdvance(s)}>💰 Advance</button>
                         </div>
                       </td>
                     </tr>
