@@ -51,7 +51,7 @@ export default function SlotChangeModal({ student, onClose, onSaved }) {
       setResult(res.data);
       toast.success("Slot changed successfully");
 
-      // 🔔 Highlight wallet credit if any
+      // Highlight wallet credit if any
       if (res.data.walletCreditAdded && Number(res.data.walletCreditAdded) > 0) {
         toast.info(
           `💰 Student overpaid Rs.${res.data.walletCreditAdded} — credited to wallet.`,
@@ -91,6 +91,7 @@ export default function SlotChangeModal({ student, onClose, onSaved }) {
                   <div className={`alert ${result.walletCreditAdded > 0 ? "alert-warning" : "alert-success"}`}>
                     <strong>{result.message}</strong>
                   </div>
+
                   <table className="table table-sm table-bordered">
                     <tbody>
                       <tr>
@@ -125,6 +126,38 @@ export default function SlotChangeModal({ student, onClose, onSaved }) {
                       </tr>
                     </tbody>
                   </table>
+
+                  {/* ── Next month preview card ── */}
+                  {result.nextMonthFee != null && (
+                    <div className="alert alert-info mt-3">
+                      <h6 className="fw-bold mb-2">📅 From next month onwards</h6>
+                      <table className="table table-sm table-borderless mb-0">
+                        <tbody>
+                          <tr>
+                            <td className="text-muted" style={{ width: "45%" }}>New time slot</td>
+                            <td>
+                              <span className="badge bg-success">
+                                {result.newInTime} – {result.newOutTime}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="text-muted">New monthly fee</td>
+                            <td>Rs.{result.newMonthlyFee}</td>
+                          </tr>
+                          <tr>
+                            <td className="text-muted">Monthly discount</td>
+                            <td>Rs.{result.newMonthlyDiscount}</td>
+                          </tr>
+                          <tr className="border-top">
+                            <td className="fw-bold">Bill from next month</td>
+                            <td className="fw-bold text-primary fs-5">Rs.{result.nextMonthFee}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
                   {result.overpaidNote && (
                     <div className="alert alert-warning small">{result.overpaidNote}</div>
                   )}
