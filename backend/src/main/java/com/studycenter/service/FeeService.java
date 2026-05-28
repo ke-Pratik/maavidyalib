@@ -52,6 +52,10 @@ import com.studycenter.dto.SlotChangeRequest;
 import com.studycenter.dto.SlotChangeResponse;
 import com.studycenter.entity.SeatBooking;
 import java.time.YearMonth;
+import com.studycenter.dto.AdvancePaymentRequest;
+import com.studycenter.dto.AdvancePaymentResponse;
+import com.studycenter.entity.PaymentAllocation;
+import com.studycenter.repository.PaymentAllocationRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -66,10 +70,11 @@ public class FeeService {
     private final FeeAdjustmentRepository feeAdjustmentRepository;
     private final AdjustmentService       adjustmentService;
     private final WalletService           walletService;
+    private final PaymentAllocationRepository paymentAllocationRepository;
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
     private static final int TOTAL_SEATS = 65;
-
+   
 
     // ═══════════════════════════════════════════════════════════════════
     // INTERNAL: Core fee calculation
@@ -998,6 +1003,130 @@ public SlotChangeResponse changeSlotForMonth(SlotChangeRequest req) {
         .assignedSeatNo(assignedSeatNo)
         .previousDuesWarning(warnings.isEmpty() ? null : warnings)
         .build();
+}
+
+    // ═══════════════════════════════════════════════════════════════════
+// CASE 4 — ADVANCE PAYMENT (multi-month allocation)
+// ═══════════════════════════════════════════════════════════════════
+@Transactional
+public AdvancePaymentResponse recordAdvancePayment(AdvancePaymentRequest req) {
+
+    log.info("Advance payment: regNo={}, total={}, months={}",
+        req.getRegNo(), req.getTotalAmount(), req.getMonths().size());
+
+    String mode = req.getPaymentMode().toUpperCase();
+    if (!"CASH".equals(mode) && !"ONLINE".equals(mode))
+        throw new InvalidRequestException("paymentMode must be CASH or ONLINE");
+
+    Student student = studentRepository.findById(req.getRegNo())
+        .orElseThrow(() -> new StudentNotFoundException("Student " + req.getRegNo() + " not found"));
+
+    String adminUser = req.getAdminUser() != null ? req.getAdminUser() : "admin";
+    String paymentId = "PAY-" + System.currentTimeMillis();
+    BigDecimal totalAvailable = req.getTotalAmount();
+    BigDecimal walletApplied  = BigDecimal.ZERO;
+
+    if (req.isUseWalletBalance()) {
+        BigDecimal wb = student.getWalletBalance();
+        if (wb.signum() > 0) {
+            walletApplied = wb.min(totalAvailable.add(BigDecimal.ZERO));   // safe defensive
+            // Actually wallet applies on TOP of cash; recompute below
+            walletApplied = wb;        // use full wallet
+            walletService.debit(req.getRegNo(), walletApplied,
+                WalletService.TxType.DEBIT_APPLIED_TO_FEE, null,
+                "Wallet applied to advance payment", adminUser);
+            totalAvailable = totalAvailable.add(walletApplied);
+        }
+    }
+
+    BigDecimal remaining = totalAvailable;
+    List<AdvancePaymentResponse.Allocation> results = new ArrayList<>();
+
+    for (AdvancePaymentRequest.MonthSpec ms : req.getMonths()) {
+        if (remaining.signum() <= 0) break;
+
+        FeeRecord fr = feeRecordRepository
+            .findByRegNoAndFeeMonthAndFeeYear(req.getRegNo(), ms.getMonth(), ms.getYear())
+            .orElseGet(() -> autoGenerateFutureMonthRecord(req.getRegNo(), ms.getMonth(), ms.getYear()));
+
+        if ("PAID".equals(fr.getPaymentStatus())) continue;
+        if (fr.getBalanceAmount().signum() <= 0) continue;
+
+        BigDecimal toAllocate = remaining.min(fr.getBalanceAmount());
+        BigDecimal newPaid    = fr.getPaidAmount().add(toAllocate);
+        BigDecimal newBal     = fr.getFinalFee().subtract(newPaid);
+        if (newBal.signum() < 0) newBal = BigDecimal.ZERO;
+        String     newStatus  = determineStatus(newPaid, fr.getFinalFee());
+
+        String receipt = generateReceiptNumber(fr.getFeeMonth(), fr.getFeeYear());
+        fr.setPaidAmount(newPaid);
+        fr.setBalanceAmount(newBal);
+        fr.setPaymentStatus(newStatus);
+        fr.setPaymentMode(mode);
+        fr.setPaymentDate(LocalDate.now());
+        fr.setReceiptNumber(receipt);
+        if (req.getRemarks() != null) fr.setRemarks(req.getRemarks());
+        feeRecordRepository.save(fr);
+
+        paymentAllocationRepository.save(PaymentAllocation.builder()
+            .paymentId(paymentId).feeId(fr.getFeeId())
+            .allocatedAmount(toAllocate).receiptNumber(receipt)
+            .build());
+
+        results.add(AdvancePaymentResponse.Allocation.builder()
+            .feeId(fr.getFeeId()).month(fr.getFeeMonth()).year(fr.getFeeYear())
+            .amountAllocated(toAllocate).newBalance(newBal)
+            .newStatus(newStatus).receiptNumber(receipt)
+            .build());
+
+        remaining = remaining.subtract(toAllocate);
+    }
+
+    BigDecimal walletCreditAdded = BigDecimal.ZERO;
+    if (remaining.signum() > 0) {
+        walletCreditAdded = remaining;
+        walletService.credit(req.getRegNo(), walletCreditAdded,
+            WalletService.TxType.CREDIT_ADVANCE_PAYMENT, null,
+            "Excess advance payment", adminUser);
+    }
+
+    return AdvancePaymentResponse.builder()
+        .message("Advance payment processed across " + results.size() + " month(s)")
+        .paymentId(paymentId).regNo(req.getRegNo())
+        .totalReceived(req.getTotalAmount())
+        .walletApplied(walletApplied)
+        .walletCreditAdded(walletCreditAdded)
+        .allocations(results)
+        .build();
+}
+
+private FeeRecord autoGenerateFutureMonthRecord(Long regNo, int month, int year) {
+    StudentFeeConfig cfg = feeConfigRepository.findByRegNoAndEffectiveToDateIsNull(regNo)
+        .orElseThrow(() -> new InvalidRequestException(
+            "No active fee config for student " + regNo));
+
+    LocalDate firstOfMonth = LocalDate.of(year, month, 1);
+    FeeCalculateResponse calc = calculateFeeInternal(
+        cfg.getInTime().format(TIME_FMT), cfg.getOutTime().format(TIME_FMT),
+        firstOfMonth, cfg.getDiscountAmount(), BigDecimal.ZERO);
+
+    FeeRecord fr = FeeRecord.builder()
+        .regNo(regNo).configId(cfg.getConfigId())
+        .feeMonth(month).feeYear(year)
+        .inTime(cfg.getInTime()).outTime(cfg.getOutTime())
+        .totalDaysInMonth(calc.getTotalDaysInMonth())
+        .applicableDays(calc.getApplicableDays())
+        .joiningDateInMonth(firstOfMonth)
+        .monthlyFee(calc.getMonthlyFee()).proratedFee(calc.getProratedFee())
+        .admissionFee(BigDecimal.ZERO)
+        .discountAmount(calc.getDiscountAmount())
+        .finalFee(calc.getFinalFee())
+        .paidAmount(BigDecimal.ZERO)
+        .balanceAmount(calc.getFinalFee())
+        .paymentStatus("PENDING")
+        .createdAt(LocalDateTime.now())
+        .build();
+    return feeRecordRepository.save(fr);
 }
 
 
