@@ -33,7 +33,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.studycenter.dto.ReviseFeeRequest;
+import com.studycenter.dto.ReviseFeeResponse;
+import com.studycenter.repository.FeeAdjustmentRepository;
+import java.util.Map;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -745,4 +748,82 @@ public static String determineStatus(BigDecimal paid, BigDecimal finalFee) {
     if (paid.compareTo(finalFee) >= 0) return "PAID";
     return "PARTIAL";
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// CASE 1 — REVISE FEE (Owner Correction of Discount / Admission)
+// ═══════════════════════════════════════════════════════════════════
+@Transactional
+public ReviseFeeResponse reviseFee(Long feeId, ReviseFeeRequest req) {
+
+    log.info("Revising fee: feeId={}", feeId);
+
+    FeeRecord fr = feeRecordRepository.findById(feeId)
+        .orElseThrow(() -> new InvalidRequestException("Fee record " + feeId + " not found"));
+
+    String adminUser = req.getAdminUser() != null ? req.getAdminUser() : "system";
+    Map<String,Object> oldVals = adjustmentService.snapshot(fr);
+
+    // Effective values — keep existing if request field is null
+    BigDecimal newDiscFullMonth = req.getNewDiscount() != null ? req.getNewDiscount()
+        : fr.getDiscountAmount()
+              .multiply(BigDecimal.valueOf(fr.getTotalDaysInMonth()))
+              .divide(BigDecimal.valueOf(fr.getApplicableDays()), 6, RoundingMode.HALF_UP);
+
+    BigDecimal newAdm = req.getNewAdmissionFee() != null ? req.getNewAdmissionFee()
+                                                        : fr.getAdmissionFee();
+
+    if (newDiscFullMonth.compareTo(fr.getMonthlyFee()) > 0)
+        throw new InvalidRequestException("Discount cannot exceed monthly fee");
+
+    // Recalculate with original proration
+    int totalDays      = fr.getTotalDaysInMonth();
+    int applicableDays = fr.getApplicableDays();
+
+    BigDecimal perDayFee  = fr.getMonthlyFee().divide(BigDecimal.valueOf(totalDays), 6, RoundingMode.HALF_UP);
+    BigDecimal perDayDisc = newDiscFullMonth.divide(BigDecimal.valueOf(totalDays), 6, RoundingMode.HALF_UP);
+
+    BigDecimal newProrated     = perDayFee.multiply(BigDecimal.valueOf(applicableDays)).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal newProratedDisc = perDayDisc.multiply(BigDecimal.valueOf(applicableDays)).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal newFinalFee     = newProrated.subtract(newProratedDisc).add(newAdm).setScale(2, RoundingMode.HALF_UP);
+    if (newFinalFee.signum() < 0) newFinalFee = BigDecimal.ZERO;
+
+    BigDecimal oldFinal    = fr.getFinalFee();
+    BigDecimal oldBalance  = fr.getBalanceAmount();
+    String     oldStatus   = fr.getPaymentStatus();
+
+    BigDecimal newBalance      = newFinalFee.subtract(fr.getPaidAmount()).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal walletCredit    = BigDecimal.ZERO;
+    String     overpaidNote    = null;
+
+    if (newBalance.signum() < 0) {
+        walletCredit = newBalance.abs();
+        newBalance   = BigDecimal.ZERO;
+        walletService.credit(fr.getRegNo(), walletCredit, WalletService.TxType.CREDIT_FROM_RECALC,
+                fr.getFeeId(), "Overpayment after fee revision", adminUser);
+        overpaidNote = "Student overpaid Rs." + walletCredit + " — credited to wallet.";
+    }
+
+    String newStatus = determineStatus(fr.getPaidAmount(), newFinalFee);
+
+    fr.setDiscountAmount(newProratedDisc);
+    fr.setAdmissionFee(newAdm);
+    fr.setProratedFee(newProrated);
+    fr.setFinalFee(newFinalFee);
+    fr.setBalanceAmount(newBalance);
+    fr.setPaymentStatus(newStatus);
+    feeRecordRepository.save(fr);
+
+    adjustmentService.persist(fr, AdjustmentService.Type.DISCOUNT_REVISED,
+            oldVals, adjustmentService.snapshot(fr), req.getReason(), adminUser);
+
+    return ReviseFeeResponse.builder()
+        .message("Fee revised successfully")
+        .feeId(feeId).regNo(fr.getRegNo())
+        .oldFinalFee(oldFinal).newFinalFee(newFinalFee)
+        .oldBalance(oldBalance).newBalance(newBalance)
+        .oldStatus(oldStatus).newStatus(newStatus)
+        .walletCreditAdded(walletCredit)
+        .overpaidNote(overpaidNote)
+        .build();
+}    
 }
