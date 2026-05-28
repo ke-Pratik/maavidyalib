@@ -3,7 +3,7 @@ import { reviseFee } from "../services/api";
 import { toast } from "react-toastify";
 
 export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
-  // ── Derive full-month discount from stored prorated value ─────
+  // Derive full-month discount from stored prorated value
   const computeFullMonthDiscount = () => {
     const stored = Number(feeRecord.discountAmount) || 0;
     const total = Number(feeRecord.totalDaysInMonth);
@@ -40,6 +40,15 @@ export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
       });
       setResult(res.data);
       toast.success("Fee revised successfully");
+
+      // 🔔 Highlight wallet credit if any
+      if (res.data.walletCreditAdded && Number(res.data.walletCreditAdded) > 0) {
+        toast.info(
+          `💰 Student overpaid Rs.${res.data.walletCreditAdded} — credited to wallet.`,
+          { autoClose: 6000 }
+        );
+      }
+
       onSaved && onSaved();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to revise fee");
@@ -90,7 +99,6 @@ export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
                 </div>
               ) : (
                 <form onSubmit={submit}>
-                  {/* ── Prominent info banner ── */}
                   <div className="alert alert-primary py-2 small mb-3">
                     💡 <strong>Existing discount and admission fee are pre-filled below.</strong>{" "}
                     Edit only the value you want to change.
@@ -110,12 +118,8 @@ export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
                       <span className="text-muted fw-normal small"> — pro-rated automatically</span>
                     </label>
                     <input
-                      type="number"
-                      className="form-control"
-                      step="0.01"
-                      min="0"
-                      value={discount}
-                      onChange={(e) => setDiscount(e.target.value)}
+                      type="number" className="form-control" step="0.01" min="0"
+                      value={discount} onChange={(e) => setDiscount(e.target.value)}
                       disabled={saving}
                     />
                     <small className="text-muted">
@@ -129,12 +133,8 @@ export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
                       <span className="text-muted fw-normal small"> — one-time</span>
                     </label>
                     <input
-                      type="number"
-                      className="form-control"
-                      step="0.01"
-                      min="0"
-                      value={admission}
-                      onChange={(e) => setAdmission(e.target.value)}
+                      type="number" className="form-control" step="0.01" min="0"
+                      value={admission} onChange={(e) => setAdmission(e.target.value)}
                       disabled={saving}
                     />
                     <small className="text-muted">
@@ -146,14 +146,9 @@ export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
                     <label className="form-label fw-semibold">
                       Reason <span className="text-danger">*</span>
                     </label>
-                    <textarea
-                      className="form-control"
-                      rows={2}
-                      required
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      disabled={saving}
-                    />
+                    <textarea className="form-control" rows={2} required
+                      value={reason} onChange={(e) => setReason(e.target.value)}
+                      disabled={saving} />
                   </div>
 
                   <button type="submit" className="btn btn-primary" disabled={saving}>
