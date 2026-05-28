@@ -163,7 +163,7 @@ function ActiveStudents() {
 
   // ── Toggle row dropdown ───────────────────────────────────────
   const toggleMenu = (e, regNo) => {
-    e.stopPropagation();    // prevent outside-click handler from firing
+    e.stopPropagation();
     setOpenMenuRegNo((cur) => (cur === regNo ? null : regNo));
   };
 
@@ -204,7 +204,6 @@ function ActiveStudents() {
                   <tr><td colSpan="10" className="text-center py-5 text-muted"><div className="fs-5">📭</div>No active students found</td></tr>
                 ) : (
                   students.map((s, idx) => {
-                    // ── Flip dropdown UPWARD for last 2 rows ──
                     const isNearBottom = idx >= students.length - 2;
 
                     return (
@@ -231,10 +230,8 @@ function ActiveStudents() {
                         <td>{feeStatusBadge(s.feeStatus)}</td>
                         <td>{s.dateOfAdmission}</td>
 
-                        {/* ── HYBRID ACTION COLUMN ── */}
                         <td>
                           <div className="d-flex gap-2 align-items-center">
-                            {/* Primary action: Edit */}
                             <button
                               className="btn btn-sm btn-outline-primary"
                               onClick={() => openEdit(s)}
@@ -242,7 +239,6 @@ function ActiveStudents() {
                               ✏️ Edit
                             </button>
 
-                            {/* More actions: ⋮ dropdown */}
                             <div style={{ position: "relative" }}>
                               <button
                                 className="btn btn-sm btn-outline-secondary"
@@ -259,7 +255,6 @@ function ActiveStudents() {
                                   style={{
                                     position: "absolute",
                                     right: 0,
-                                    // ── Flip upward for last 2 rows ──
                                     ...(isNearBottom
                                       ? { bottom: "100%", marginBottom: "4px" }
                                       : { top: "100%", marginTop: "4px" }),
@@ -463,13 +458,13 @@ function ActiveStudents() {
         </>
       )}
 
-      {/* ── Slot Change Modal (Phase 3) ───────────────────────── */}
+      {/* ── Slot Change Modal — KEEP OPEN AFTER SAVE so admin sees result ── */}
       {slotTarget && (
         <SlotChangeModal
           student={slotTarget}
           onClose={() => setSlotTarget(null)}
           onSaved={() => {
-            setSlotTarget(null);
+            // 🔧 FIX: do NOT setSlotTarget(null) here — modal must stay open to show result panel
             fetchStudents(page);
           }}
         />
