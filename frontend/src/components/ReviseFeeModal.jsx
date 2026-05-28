@@ -5,19 +5,20 @@ import { toast } from "react-toastify";
 export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
   // ── Derive full-month discount from stored prorated value ─────
   const computeFullMonthDiscount = () => {
-    if (!feeRecord.discountAmount) return "";
+    const stored = Number(feeRecord.discountAmount) || 0;
     const total = Number(feeRecord.totalDaysInMonth);
     const applicable = Number(feeRecord.applicableDays);
-    const stored = Number(feeRecord.discountAmount);
     if (!total || !applicable || total === applicable) {
       return stored.toFixed(2);
     }
-    const fullMonth = (stored * total) / applicable;
-    return fullMonth.toFixed(2);
+    return ((stored * total) / applicable).toFixed(2);
   };
 
-  const [discount, setDiscount]   = useState(computeFullMonthDiscount());
-  const [admission, setAdmission] = useState(feeRecord.admissionFee || "");
+  const initialDiscount  = computeFullMonthDiscount();
+  const initialAdmission = (Number(feeRecord.admissionFee) || 0).toFixed(2);
+
+  const [discount, setDiscount]   = useState(initialDiscount);
+  const [admission, setAdmission] = useState(initialAdmission);
   const [reason, setReason]       = useState("");
   const [saving, setSaving]       = useState(false);
   const [result, setResult]       = useState(null);
@@ -84,18 +85,22 @@ export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
                     </tbody>
                   </table>
                   {result.overpaidNote && (
-                    <div className="alert alert-warning small">
-                      {result.overpaidNote}
-                    </div>
+                    <div className="alert alert-warning small">{result.overpaidNote}</div>
                   )}
                 </div>
               ) : (
                 <form onSubmit={submit}>
+                  {/* ── Prominent info banner ── */}
+                  <div className="alert alert-primary py-2 small mb-3">
+                    💡 <strong>Existing discount and admission fee are pre-filled below.</strong>{" "}
+                    Edit only the value you want to change.
+                  </div>
+
                   {isMidMonth && (
                     <div className="alert alert-info py-2 small mb-3">
-                      ℹ️ This is a mid-month joining record ({feeRecord.applicableDays} of{" "}
-                      {feeRecord.totalDaysInMonth} days). Discount shown is the
-                      <strong> monthly amount</strong> — system will pro-rate automatically.
+                      ℹ️ Mid-month joining record ({feeRecord.applicableDays} of{" "}
+                      {feeRecord.totalDaysInMonth} days). Discount shown is the{" "}
+                      <strong>monthly amount</strong> — system pro-rates automatically.
                     </div>
                   )}
 
@@ -114,7 +119,7 @@ export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
                       disabled={saving}
                     />
                     <small className="text-muted">
-                      Current: Rs.{computeFullMonthDiscount() || "0.00"} /month
+                      Pre-filled from current record: Rs.{initialDiscount}/month
                     </small>
                   </div>
 
@@ -132,6 +137,9 @@ export default function ReviseFeeModal({ feeRecord, onClose, onSaved }) {
                       onChange={(e) => setAdmission(e.target.value)}
                       disabled={saving}
                     />
+                    <small className="text-muted">
+                      Pre-filled from current record: Rs.{initialAdmission}
+                    </small>
                   </div>
 
                   <div className="mb-3">
