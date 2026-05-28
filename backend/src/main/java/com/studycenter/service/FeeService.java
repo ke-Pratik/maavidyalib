@@ -48,6 +48,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import com.studycenter.dto.SlotChangeRequest;
+import com.studycenter.dto.SlotChangeResponse;
+import com.studycenter.entity.SeatBooking;
+import java.time.YearMonth;
 
 @Service
 @RequiredArgsConstructor
@@ -64,6 +68,8 @@ public class FeeService {
     private final WalletService           walletService;
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final int TOTAL_SEATS = 65;
+
 
     // ═══════════════════════════════════════════════════════════════════
     // INTERNAL: Core fee calculation
@@ -825,5 +831,175 @@ public ReviseFeeResponse reviseFee(Long feeId, ReviseFeeRequest req) {
         .walletCreditAdded(walletCredit)
         .overpaidNote(overpaidNote)
         .build();
-}    
+}
+
+private BigDecimal resolveMonthlyFee(LocalTime inTime, LocalTime outTime) {
+    Optional<FeeStructure> mapped = feeStructureRepository.findByInTimeAndOutTimeAndIsActiveTrue(inTime, outTime);
+    if (mapped.isPresent()) return mapped.get().getFeeAmount();
+    long hrs = Duration.between(inTime, outTime).toHours();
+    if (hrs == 4) return new BigDecimal("500.00");
+    return BigDecimal.valueOf(hrs * 100);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CASE 2 + 3 — UNIFIED SLOT CHANGE
+// ═══════════════════════════════════════════════════════════════════
+@Transactional
+public SlotChangeResponse changeSlotForMonth(SlotChangeRequest req) {
+
+    Long regNo = req.getRegNo();
+    String adminUser = req.getAdminUser() != null ? req.getAdminUser() : "admin";
+
+    Student student = studentRepository.findById(regNo)
+        .orElseThrow(() -> new StudentNotFoundException("Student " + regNo + " not found"));
+    if (!student.getIsActive())
+        throw new InvalidRequestException("Cannot change slot for inactive student");
+
+    LocalTime newIn  = LocalTime.parse(req.getNewInTime(), TIME_FMT);
+    LocalTime newOut = LocalTime.parse(req.getNewOutTime(), TIME_FMT);
+    if (!newIn.isBefore(newOut))
+        throw new InvalidRequestException("inTime must be before outTime");
+
+    LocalDate today = LocalDate.now();
+    int month = today.getMonthValue(), year = today.getYear();
+    YearMonth ym = YearMonth.of(year, month);
+    int totalDays = ym.lengthOfMonth();
+    int changeDay = today.getDayOfMonth();
+
+    // Current month FeeRecord must exist
+    FeeRecord fr = feeRecordRepository.findByRegNoAndFeeMonthAndFeeYear(regNo, month, year)
+        .orElseThrow(() -> new InvalidRequestException(
+            "No fee record for " + month + "/" + year + ". Generate current month fee first."));
+
+    Map<String,Object> oldVals = adjustmentService.snapshot(fr);
+
+    // Gate check
+    long booked = seatBookingRepository.countBookedSeatsForSlotExcludingStudent(
+            newIn, newOut, regNo, month, year);
+    if (booked >= TOTAL_SEATS)
+        throw new InvalidRequestException(
+            "No seats available in slot " + req.getNewInTime() + "-" + req.getNewOutTime());
+
+    BigDecimal newMonthly  = resolveMonthlyFee(newIn, newOut);
+    BigDecimal newDiscount = req.getNewDiscount() != null ? req.getNewDiscount() : BigDecimal.ZERO;
+    if (newDiscount.compareTo(newMonthly) > 0)
+        throw new InvalidRequestException("Discount cannot exceed monthly fee");
+
+    // ── Split formula (works for changeDay = 1 too) ──
+    int oldDays = changeDay - 1;
+    int newDays = totalDays - oldDays;
+
+    BigDecimal oldMonthlyFee = fr.getMonthlyFee();
+    // Old full-month discount inferred from prorated discount
+    BigDecimal oldDiscFull = fr.getApplicableDays() > 0
+        ? fr.getDiscountAmount().multiply(BigDecimal.valueOf(totalDays))
+              .divide(BigDecimal.valueOf(fr.getApplicableDays()), 6, RoundingMode.HALF_UP)
+        : BigDecimal.ZERO;
+
+    BigDecimal perDayOldFee  = oldMonthlyFee.divide(BigDecimal.valueOf(totalDays), 6, RoundingMode.HALF_UP);
+    BigDecimal perDayOldDisc = oldDiscFull.divide(BigDecimal.valueOf(totalDays), 6, RoundingMode.HALF_UP);
+    BigDecimal perDayNewFee  = newMonthly.divide(BigDecimal.valueOf(totalDays), 6, RoundingMode.HALF_UP);
+    BigDecimal perDayNewDisc = newDiscount.divide(BigDecimal.valueOf(totalDays), 6, RoundingMode.HALF_UP);
+
+    BigDecimal oldUsedFee     = perDayOldFee.subtract(perDayOldDisc)
+                                            .multiply(BigDecimal.valueOf(oldDays))
+                                            .setScale(2, RoundingMode.HALF_UP);
+    BigDecimal newRemainingFee = perDayNewFee.subtract(perDayNewDisc)
+                                             .multiply(BigDecimal.valueOf(newDays))
+                                             .setScale(2, RoundingMode.HALF_UP);
+
+    BigDecimal admissionFee = fr.getAdmissionFee();
+    BigDecimal revisedFinal = oldUsedFee.add(newRemainingFee).add(admissionFee).setScale(2, RoundingMode.HALF_UP);
+    if (revisedFinal.signum() < 0) revisedFinal = BigDecimal.ZERO;
+
+    BigDecimal newBalance = revisedFinal.subtract(fr.getPaidAmount()).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal walletCredit = BigDecimal.ZERO;
+    String overpaidNote = null;
+    if (newBalance.signum() < 0) {
+        walletCredit = newBalance.abs();
+        newBalance = BigDecimal.ZERO;
+        walletService.credit(regNo, walletCredit, WalletService.TxType.CREDIT_FROM_RECALC,
+            fr.getFeeId(), "Overpaid after slot change", adminUser);
+        overpaidNote = "Student overpaid Rs." + walletCredit + " — credited to wallet.";
+    }
+    String newStatus = determineStatus(fr.getPaidAmount(), revisedFinal);
+
+    // Update student inTime/outTime
+    student.setInTime(newIn);
+    student.setOutTime(newOut);
+    studentRepository.save(student);
+
+    // Update FeeRecord
+    fr.setInTime(newIn);
+    fr.setOutTime(newOut);
+    fr.setMonthlyFee(newMonthly);
+    fr.setDiscountAmount(newDiscount);
+    fr.setProratedFee(oldUsedFee.add(newRemainingFee));
+    fr.setFinalFee(revisedFinal);
+    fr.setBalanceAmount(newBalance);
+    fr.setPaymentStatus(newStatus);
+    feeRecordRepository.save(fr);
+
+    // Close old FeeConfig + create new
+    feeConfigRepository.findByRegNoAndEffectiveToDateIsNull(regNo).ifPresent(cfg -> {
+        cfg.setEffectiveToDate(today);
+        feeConfigRepository.save(cfg);
+    });
+    feeConfigRepository.save(StudentFeeConfig.builder()
+        .regNo(regNo).inTime(newIn).outTime(newOut)
+        .monthlyFee(newMonthly).discountAmount(newDiscount)
+        .admissionFee(BigDecimal.ZERO)
+        .effectiveFromDate(today).effectiveToDate(null)
+        .createdAt(LocalDateTime.now())
+        .build());
+
+    // Capture old seat → cancel → try auto-reallot
+    Integer oldSeatNo = seatBookingRepository
+        .findFirstByRegNoAndBookingMonthAndBookingYear(regNo, month, year)
+        .map(SeatBooking::getSeatNo).orElse(null);
+    seatBookingRepository.deleteByRegNo(regNo);
+
+    Integer assignedSeatNo = null;
+    if (oldSeatNo != null) {
+        long conflicts = seatBookingRepository.countConflictsForSeat(
+            oldSeatNo, newIn, newOut, regNo, month, year);
+        if (conflicts == 0) {
+            seatBookingRepository.save(SeatBooking.builder()
+                .seatNo(oldSeatNo).regNo(regNo).gender(student.getGender())
+                .startTime(newIn).endTime(newOut)
+                .bookingMonth(month).bookingYear(year).bookingDate(today)
+                .build());
+            assignedSeatNo = oldSeatNo;
+        }
+    }
+
+    // Previous dues warning
+    List<FeeRecord> prevUnpaid = feeRecordRepository.findPreviousUnpaidRecords(regNo, month, year);
+    List<String> warnings = prevUnpaid.stream()
+        .map(f -> String.format("%02d/%d — Rs.%s (%s)",
+            f.getFeeMonth(), f.getFeeYear(), f.getBalanceAmount(), f.getPaymentStatus()))
+        .toList();
+
+    // Audit
+    adjustmentService.persist(fr, AdjustmentService.Type.SLOT_CHANGED,
+        oldVals, adjustmentService.snapshot(fr), req.getReason(), adminUser);
+
+    return SlotChangeResponse.builder()
+        .message(assignedSeatNo != null
+            ? "Slot changed. Seat " + assignedSeatNo + " reallotted."
+            : "Slot changed. Manual seat re-allotment required.")
+        .feeId(fr.getFeeId()).regNo(regNo)
+        .changeDay(changeDay).oldDays(oldDays).newDays(newDays)
+        .oldUsedFee(oldUsedFee).newRemainingFee(newRemainingFee)
+        .admissionFee(admissionFee).revisedFinalFee(revisedFinal)
+        .paidAmount(fr.getPaidAmount()).newBalance(newBalance)
+        .newStatus(newStatus)
+        .walletCreditAdded(walletCredit).overpaidNote(overpaidNote)
+        .assignedSeatNo(assignedSeatNo)
+        .previousDuesWarning(warnings.isEmpty() ? null : warnings)
+        .build();
+}
+
+
+    
 }
