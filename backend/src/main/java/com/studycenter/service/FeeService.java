@@ -824,6 +824,15 @@ public ReviseFeeResponse reviseFee(Long feeId, ReviseFeeRequest req) {
     fr.setPaymentStatus(newStatus);
     feeRecordRepository.save(fr);
 
+    // ── NEW: Sync active FeeConfig so future months + slot change see the new discount ──
+    final BigDecimal syncedDiscount = newDiscFullMonth;
+    feeConfigRepository.findByRegNoAndEffectiveToDateIsNull(fr.getRegNo())
+        .ifPresent(cfg -> {
+            cfg.setDiscountAmount(syncedDiscount);
+            feeConfigRepository.save(cfg);
+            log.info("Synced FeeConfig: regNo={}, newDiscount={}", fr.getRegNo(), syncedDiscount);
+        });
+
     adjustmentService.persist(fr, AdjustmentService.Type.DISCOUNT_REVISED,
             oldVals, adjustmentService.snapshot(fr), req.getReason(), adminUser);
 
@@ -891,9 +900,15 @@ public SlotChangeResponse changeSlotForMonth(SlotChangeRequest req) {
         throw new InvalidRequestException("Discount cannot exceed monthly fee");
 
     // ── Split formula (works for changeDay = 1 too) ──
-    int oldDays = changeDay - 1;
-    int newDays = totalDays - oldDays;
+    int dojDay = fr.getJoiningDateInMonth() != null
+    ? fr.getJoiningDateInMonth().getDayOfMonth()
+    : 1;
 
+    // Student used old slot from DOJ → day before change
+    int oldDays = Math.max(0, changeDay - dojDay);
+    // Student uses new slot from change day → end of month
+    int newDays = totalDays - changeDay + 1;
+  
     BigDecimal oldMonthlyFee = fr.getMonthlyFee();
     // Old full-month discount inferred from prorated discount
     BigDecimal oldDiscFull = fr.getApplicableDays() > 0
