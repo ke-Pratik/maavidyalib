@@ -6,6 +6,8 @@ import {
   editStudent,
 } from "../services/api";
 import { toast } from "react-toastify";
+import SlotChangeModal from "../components/SlotChangeModal";
+import AdvancePaymentModal from "../components/AdvancePaymentModal";
 
 const PAGE_SIZE = 10;
 
@@ -16,6 +18,9 @@ function ActiveStudents() {
   const [page, setPage]                   = useState(0);
   const [loading, setLoading]             = useState(true);
 
+  // ── Row dropdown state (which row's menu is open) ─────────────
+  const [openMenuRegNo, setOpenMenuRegNo] = useState(null);
+
   // ── Deactivate modal ──────────────────────────────────────────
   const [showDeactivate, setShowDeactivate]       = useState(false);
   const [deactivateTarget, setDeactivateTarget]   = useState(null);
@@ -23,7 +28,7 @@ function ActiveStudents() {
   const [deactivating, setDeactivating]           = useState(false);
 
   // ── Edit modal ────────────────────────────────────────────────
-  const [showEdit, setShowEdit]     = useState(false);
+  const [showEdit, setShowEdit]       = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editSaving, setEditSaving]   = useState(false);
   const [editSuccess, setEditSuccess] = useState(false);
@@ -33,6 +38,13 @@ function ActiveStudents() {
     gender: "", address: "", mobile: "", remarks: "",
   });
 
+  // ── Slot change modal target ──────────────────────────────────
+  const [slotTarget, setSlotTarget] = useState(null);
+
+  // ── Advance payment modal target ──────────────────────────────
+  const [advanceTarget, setAdvanceTarget] = useState(null);
+
+  // ── Fetch active students ─────────────────────────────────────
   const fetchStudents = useCallback(async (pageNum) => {
     setLoading(true);
     try {
@@ -49,15 +61,34 @@ function ActiveStudents() {
 
   useEffect(() => { fetchStudents(page); }, [page, fetchStudents]);
 
+  // ── Close dropdown on outside click ───────────────────────────
+  useEffect(() => {
+    const handler = () => setOpenMenuRegNo(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+
   // ── Deactivate handlers ───────────────────────────────────────
-  const openDeactivate = (s) => { setDeactivateTarget(s); setDeactivateRemarks(""); setShowDeactivate(true); };
-  const closeDeactivate = () => { if (deactivating) return; setShowDeactivate(false); setDeactivateTarget(null); };
+  const openDeactivate = (s) => {
+    setOpenMenuRegNo(null);
+    setDeactivateTarget(s);
+    setDeactivateRemarks("");
+    setShowDeactivate(true);
+  };
+  const closeDeactivate = () => {
+    if (deactivating) return;
+    setShowDeactivate(false);
+    setDeactivateTarget(null);
+  };
 
   const confirmDeactivate = async () => {
     if (!deactivateTarget) return;
     setDeactivating(true);
     try {
-      const res = await deactivateStudent({ regNo: deactivateTarget.regNo, remarks: deactivateRemarks.trim() || null });
+      const res = await deactivateStudent({
+        regNo: deactivateTarget.regNo,
+        remarks: deactivateRemarks.trim() || null,
+      });
       toast.success(res.data.message || "Student deactivated");
       closeDeactivate();
       fetchStudents(page);
@@ -70,6 +101,7 @@ function ActiveStudents() {
 
   // ── Edit handlers ─────────────────────────────────────────────
   const openEdit = async (s) => {
+    setOpenMenuRegNo(null);
     setEditRegNo(s.regNo);
     setEditSuccess(false);
     setEditLoading(true);
@@ -127,13 +159,32 @@ function ActiveStudents() {
     }
   };
 
- const feeStatusBadge = (status) => {
-  if (status === "PAID")
-    return <span className="badge bg-success">✅ PAID</span>;
-  if (status === "PARTIAL")
-    return <span className="badge bg-warning text-dark">🔶 PARTIAL</span>;
-  return <span className="badge bg-danger">🔴 DUES</span>;
-};
+  // ── Slot change handler ───────────────────────────────────────
+  const openSlotChange = (s) => {
+    setOpenMenuRegNo(null);
+    setSlotTarget(s);
+  };
+
+  // ── Advance payment handler ───────────────────────────────────
+  const openAdvance = (s) => {
+    setOpenMenuRegNo(null);
+    setAdvanceTarget(s);
+  };
+
+  // ── Toggle row dropdown ───────────────────────────────────────
+  const toggleMenu = (e, regNo) => {
+    e.stopPropagation();    // prevent outside-click handler from firing
+    setOpenMenuRegNo((cur) => (cur === regNo ? null : regNo));
+  };
+
+  // ── Fee status badge ──────────────────────────────────────────
+  const feeStatusBadge = (status) => {
+    if (status === "PAID")
+      return <span className="badge bg-success">✅ PAID</span>;
+    if (status === "PARTIAL")
+      return <span className="badge bg-warning text-dark">🔶 PARTIAL</span>;
+    return <span className="badge bg-danger">🔴 DUES</span>;
+  };
 
   return (
     <div>
@@ -167,18 +218,88 @@ function ActiveStudents() {
                       <td className="text-muted">{page * PAGE_SIZE + idx + 1}</td>
                       <td className="fw-bold">{s.regNo}</td>
                       <td>{s.name}</td>
-                      <td><span className={`badge ${s.gender === "Male" ? "bg-primary" : "bg-danger"}`}>{s.gender}</span></td>
+                      <td>
+                        <span className={`badge ${s.gender === "Male" ? "bg-primary" : "bg-danger"}`}>
+                          {s.gender}
+                        </span>
+                      </td>
                       <td>{s.mobile}</td>
-                      <td>{s.seatNo > 0 ? <span className="badge bg-info text-dark fw-bold">{s.seatNo}</span> : <span className="text-muted">—</span>}</td>
-                      <td>{s.timeSlot ? <span className="badge bg-success">{s.timeSlot}</span> : <span className="text-muted">Not set</span>}</td>
+                      <td>
+                        {s.seatNo > 0
+                          ? <span className="badge bg-info text-dark fw-bold">{s.seatNo}</span>
+                          : <span className="text-muted">—</span>}
+                      </td>
+                      <td>
+                        {s.timeSlot
+                          ? <span className="badge bg-success">{s.timeSlot}</span>
+                          : <span className="text-muted">Not set</span>}
+                      </td>
                       <td>{feeStatusBadge(s.feeStatus)}</td>
                       <td>{s.dateOfAdmission}</td>
+
+                      {/* ── HYBRID ACTION COLUMN ── */}
                       <td>
-                        <div className="d-flex gap-2">
-                          <button className="btn btn-sm btn-outline-primary" onClick={() => openEdit(s)}>✏️ Edit</button>
-                          <button className="btn btn-sm btn-outline-danger"  onClick={() => openDeactivate(s)}>🔴 Deactivate</button>
-                          <button className="btn btn-sm btn-outline-warning" onClick={() => openSlotChange(s)}>🕐 Slot</button>
-                          <button className="btn btn-sm btn-outline-success" onClick={() => openAdvance(s)}>💰 Advance</button>
+                        <div className="d-flex gap-2 align-items-center">
+                          {/* Primary action: Edit */}
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => openEdit(s)}
+                          >
+                            ✏️ Edit
+                          </button>
+
+                          {/* More actions: ⋮ dropdown */}
+                          <div style={{ position: "relative" }}>
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={(e) => toggleMenu(e, s.regNo)}
+                              title="More actions"
+                              style={{ minWidth: "32px" }}
+                            >
+                              ⋮
+                            </button>
+
+                            {openMenuRegNo === s.regNo && (
+                              <ul
+                                className="dropdown-menu show shadow"
+                                style={{
+                                  position: "absolute",
+                                  right: 0,
+                                  top: "100%",
+                                  marginTop: "4px",
+                                  minWidth: "200px",
+                                  zIndex: 1050,
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <li>
+                                  <button
+                                    className="dropdown-item"
+                                    onClick={() => openSlotChange(s)}
+                                  >
+                                    🕐 Change Slot
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="dropdown-item"
+                                    onClick={() => openAdvance(s)}
+                                  >
+                                    💰 Pay Advance
+                                  </button>
+                                </li>
+                                <li><hr className="dropdown-divider" /></li>
+                                <li>
+                                  <button
+                                    className="dropdown-item text-danger"
+                                    onClick={() => openDeactivate(s)}
+                                  >
+                                    🔴 Deactivate
+                                  </button>
+                                </li>
+                              </ul>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -351,6 +472,30 @@ function ActiveStudents() {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Slot Change Modal (Phase 3) ───────────────────────── */}
+      {slotTarget && (
+        <SlotChangeModal
+          student={slotTarget}
+          onClose={() => setSlotTarget(null)}
+          onSaved={() => {
+            setSlotTarget(null);
+            fetchStudents(page);
+          }}
+        />
+      )}
+
+      {/* ── Advance Payment Modal (Phase 4) ───────────────────── */}
+      {advanceTarget && (
+        <AdvancePaymentModal
+          student={advanceTarget}
+          onClose={() => setAdvanceTarget(null)}
+          onSaved={() => {
+            setAdvanceTarget(null);
+            fetchStudents(page);
+          }}
+        />
       )}
     </div>
   );
