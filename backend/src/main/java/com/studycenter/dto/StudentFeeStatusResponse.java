@@ -35,6 +35,7 @@ public class StudentFeeStatusResponse {
     // ── NEW fields ──
     private String     dateOfAdmission;   // Student's overall admission date (yyyy-MM-dd)
     private BigDecimal monthlyDiscount;   // From active StudentFeeConfig
+    private BigDecimal walletBalance;   // ← NEW
 
     private List<FeeRecord> monthlyRecords;
 }

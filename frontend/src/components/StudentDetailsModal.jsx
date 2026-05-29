@@ -106,36 +106,44 @@ export default function StudentDetailsModal({ regNo, studentName, onClose }) {
                     👤 <strong>{data.gender}</strong>  &nbsp;|&nbsp;  📱 {data.mobile}
                   </div>
 
-                  {/* Fee summary row (5 cards) */}
+                  {/* Fee summary row — NOW 6 cards (added Wallet) */}
                   <div className="row g-3 text-center mb-3">
-                    <div className="col-md-3 col-lg">
+                    <div className="col-md-4 col-lg">
                       <div className="border rounded p-2">
                         <div className="text-muted small">Joining Date</div>
                         <div className="fw-bold">{formatDate(data.dateOfAdmission)}</div>
                       </div>
                     </div>
-                    <div className="col-md-3 col-lg">
+                    <div className="col-md-4 col-lg">
                       <div className="border rounded p-2 bg-light">
                         <div className="text-muted small">Total Fee</div>
                         <div className="fw-bold fs-5">₹{data.totalFee}</div>
                       </div>
                     </div>
-                    <div className="col-md-3 col-lg">
+                    <div className="col-md-4 col-lg">
                       <div className="border rounded p-2" style={{ background: "#fef3c7" }}>
                         <div className="text-muted small">Discount</div>
                         <div className="fw-bold fs-5 text-warning">₹{data.monthlyDiscount || 0}</div>
                       </div>
                     </div>
-                    <div className="col-md-3 col-lg">
+                    <div className="col-md-4 col-lg">
                       <div className="border rounded p-2" style={{ background: "#d1fae5" }}>
                         <div className="text-muted small">Total Paid</div>
                         <div className="fw-bold fs-5 text-success">₹{data.totalPaid}</div>
                       </div>
                     </div>
-                    <div className="col-md-3 col-lg">
+                    <div className="col-md-4 col-lg">
                       <div className="border rounded p-2" style={{ background: "#fee2e2" }}>
                         <div className="text-muted small">Balance</div>
                         <div className="fw-bold fs-5 text-danger">₹{data.totalBalance}</div>
+                      </div>
+                    </div>
+
+                    {/* ── NEW: Wallet card ── */}
+                    <div className="col-md-4 col-lg">
+                      <div className="border rounded p-2" style={{ background: "#fffbeb" }}>
+                        <div className="text-muted small">💰 Wallet</div>
+                        <div className="fw-bold fs-5">Rs.{data.walletBalance || 0}</div>
                       </div>
                     </div>
                   </div>
