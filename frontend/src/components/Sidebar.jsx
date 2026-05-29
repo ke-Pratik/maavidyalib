@@ -6,16 +6,15 @@ import {
   FaUserSlash,
   FaChair,
   FaSearch,
-  FaListAlt,
+  FaClipboardList,
   FaPlusCircle,
   FaCalculator,
   FaCreditCard,
   FaUserTag,
-  FaClipboardList,
   FaChartBar,
   FaSignOutAlt,
-  FaLayerGroup, // ← Bulk Payment icon
-  FaPrint, // ← Receipt Reprint icon
+  FaLayerGroup,
+  FaPrint,
 } from "react-icons/fa";
 
 function Sidebar() {
@@ -39,26 +38,34 @@ function Sidebar() {
           <FaHome className="me-2" /> Dashboard
         </NavLink>
 
+        {/* ═══ STUDENTS ═══ */}
         <div className="section-title">👥 Students</div>
         <NavLink
           to="/students/register"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaUserPlus className="me-2" /> Register
+          <FaUserPlus className="me-2" /> Register Student
         </NavLink>
         <NavLink
           to="/students/active"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaUsers className="me-2" /> Active
+          <FaUsers className="me-2" /> Active Students
         </NavLink>
         <NavLink
           to="/students/inactive"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaUserSlash className="me-2" /> Inactive
+          <FaUserSlash className="me-2" /> Inactive Students
+        </NavLink>
+        <NavLink
+          to="/fees/student"
+          className={({ isActive }) => (isActive ? "active" : "")}
+        >
+          <FaUserTag className="me-2" /> Student Details
         </NavLink>
 
+        {/* ═══ SEATS ═══ */}
         <div className="section-title">🪑 Seats</div>
         <NavLink
           to="/seats/allot"
@@ -76,46 +83,44 @@ function Sidebar() {
           to="/seats/check"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaSearch className="me-2" /> Check Seat
+          <FaSearch className="me-2" /> Check Availability
         </NavLink>
+
+        {/* ═══ FEES ═══ */}
         <div className="section-title">💰 Fees</div>
         <NavLink
           to="/fees/calculate"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaCalculator className="me-2" /> Calculate Fee
+          <FaCalculator className="me-2" /> Fee Calculator
         </NavLink>
         <NavLink
           to="/fees/pay"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaCreditCard className="me-2" /> Payment
+          <FaCreditCard className="me-2" /> Fee Payment
         </NavLink>
         <NavLink
-          to="/fees/student"
+          to="/fees/bulk-payment"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaUserTag className="me-2" /> Student Details
+          <FaLayerGroup className="me-2" /> Bulk Payment
         </NavLink>
+        <NavLink
+          to="/receipt-search"
+          className={({ isActive }) => (isActive ? "active" : "")}
+        >
+          <FaPrint className="me-2" /> Reprint Receipt
+        </NavLink>
+
+        {/* ═══ REPORTS ═══ */}
+        <div className="section-title">📊 Reports</div>
         <NavLink
           to="/fees/status"
           className={({ isActive }) => (isActive ? "active" : "")}
         >
-          <FaClipboardList className="me-2" /> All Fee Status
+          <FaClipboardList className="me-2" /> Monthly Fee Status
         </NavLink>
-       <NavLink
-  to="/fees/bulk-payment"
-  className={({ isActive }) => (isActive ? "active" : "")}
->
-  <FaLayerGroup className="me-2" /> Bulk Payment
-</NavLink>
-
-<NavLink
-  to="/receipt-search"
-  className={({ isActive }) => (isActive ? "active" : "")}
->
-  <FaPrint className="me-2" /> Receipt Reprint
-</NavLink>
         <NavLink
           to="/fees/collection"
           className={({ isActive }) => (isActive ? "active" : "")}
