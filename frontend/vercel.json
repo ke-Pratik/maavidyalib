@@ -1,5 +1,4 @@
 {
-  "existingKey": "...",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
