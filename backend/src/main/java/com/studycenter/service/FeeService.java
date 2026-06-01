@@ -662,7 +662,7 @@ public class FeeService {
             record.setBalanceAmount(newBalance);
             record.setPaymentStatus(newStatus);
             record.setPaymentMode(mode);
-            record.setPaymentDate(LocalDate.now());
+            fr.setPaymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now());
             record.setReceiptNumber(receipt);
             feeRecordRepository.save(record);
 
