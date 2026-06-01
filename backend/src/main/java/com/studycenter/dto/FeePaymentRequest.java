@@ -30,4 +30,6 @@ public class FeePaymentRequest {
     private String paymentMode;
 
     private String remarks;
+   private LocalDate paymentDate;  
+
 }

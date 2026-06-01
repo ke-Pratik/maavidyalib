@@ -28,7 +28,6 @@ function CollectionReport() {
         const res = await getMonthlyCollection({ month, year });
         setData(res.data);
 
-        // Auto-fetch previous month for comparison
         const prevMonth = month === 1 ? 12 : Number(month) - 1;
         const prevYear  = month === 1 ? Number(year) - 1 : Number(year);
         try {
@@ -50,19 +49,25 @@ function CollectionReport() {
 
   const exportCSV = () => {
     if (!data) return;
+    const isMonthly = reportType === "monthly";
     const rows = [
       ["Report Period", data.period],
       [],
-      ["Metric", "Current Month", prevData ? "Previous Month" : ""],
-      ["Total Students",    data.totalStudents,    prevData?.totalStudents    ?? ""],
-      ["Paid Count",        data.paidCount,        prevData?.paidCount        ?? ""],
-      ["Partial Count",     data.partialCount,     prevData?.partialCount     ?? ""],
-      ["Pending Count",     data.pendingCount,     prevData?.pendingCount     ?? ""],
-      ["Total Fee Expected",data.totalFeeExpected, prevData?.totalFeeExpected ?? ""],
-      ["Total Collected",   data.totalCollected,   prevData?.totalCollected   ?? ""],
-      ["Total Balance",     data.totalBalance,     prevData?.totalBalance     ?? ""],
-      ["Cash Collected",    data.cashCollected,    prevData?.cashCollected    ?? ""],
-      ["Online Collected",  data.onlineCollected,  prevData?.onlineCollected  ?? ""],
+      ["Metric", "Current Period", prevData ? "Previous Period" : ""],
+      ["Total Students",     data.totalStudents,    prevData?.totalStudents    ?? ""],
+      ["Paid Count",         data.paidCount,        prevData?.paidCount        ?? ""],
+      ["Partial Count",      data.partialCount,     prevData?.partialCount     ?? ""],
+      // Only include Pending + Expected + Balance rows in monthly mode
+      ...(isMonthly ? [
+        ["Pending Count",      data.pendingCount,     prevData?.pendingCount     ?? ""],
+        ["Total Fee Expected", data.totalFeeExpected, prevData?.totalFeeExpected ?? ""],
+      ] : []),
+      ["Total Collected",    data.totalCollected,   prevData?.totalCollected   ?? ""],
+      ...(isMonthly ? [
+        ["Total Balance",      data.totalBalance,     prevData?.totalBalance     ?? ""],
+      ] : []),
+      ["Cash Collected",     data.cashCollected,    prevData?.cashCollected    ?? ""],
+      ["Online Collected",   data.onlineCollected,  prevData?.onlineCollected  ?? ""],
     ];
     const csv = rows
       .map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
@@ -76,7 +81,6 @@ function CollectionReport() {
     URL.revokeObjectURL(url);
   };
 
-  // Show ▲/▼ % change vs previous month
   const changeBadge = (curr, prev) => {
     if (prev == null || prev === 0) return null;
     const pct = (((curr - prev) / prev) * 100).toFixed(1);
@@ -87,6 +91,8 @@ function CollectionReport() {
       </span>
     );
   };
+
+  const isMonthly = reportType === "monthly";
 
   return (
     <div>
@@ -99,20 +105,20 @@ function CollectionReport() {
             <div className="form-check">
               <input className="form-check-input" type="radio"
                 checked={reportType === "monthly"}
-                onChange={() => setReportType("monthly")} />
+                onChange={() => { setReportType("monthly"); setData(null); setPrevData(null); }} />
               <label className="form-check-label">Monthly</label>
             </div>
             <div className="form-check">
               <input className="form-check-input" type="radio"
                 checked={reportType === "range"}
-                onChange={() => setReportType("range")} />
+                onChange={() => { setReportType("range"); setData(null); setPrevData(null); }} />
               <label className="form-check-label">Custom Date Range</label>
             </div>
           </div>
         </div>
 
         <form onSubmit={handleFetch}>
-          {reportType === "monthly" ? (
+          {isMonthly ? (
             <div className="d-flex gap-3 align-items-end">
               <div>
                 <label className="form-label fw-bold">Month</label>
@@ -171,10 +177,14 @@ function CollectionReport() {
           {/* Summary cards */}
           <div className="row g-3 mb-4">
             {[
-              { label: "Total Students", value: data.totalStudents,  prev: prevData?.totalStudents,  color: "" },
-              { label: "✅ Paid",        value: data.paidCount,      prev: prevData?.paidCount,      color: "border-success" },
-              { label: "🔶 Partial",     value: data.partialCount,   prev: prevData?.partialCount,   color: "border-warning" },
-              { label: "⏳ Pending",     value: data.pendingCount,   prev: prevData?.pendingCount,   color: "border-danger" },
+              { label: "Total Students", value: data.totalStudents, prev: prevData?.totalStudents, color: "" },
+              { label: "✅ Paid",        value: data.paidCount,     prev: prevData?.paidCount,     color: "border-success" },
+              { label: "🔶 Partial",     value: data.partialCount,  prev: prevData?.partialCount,  color: "border-warning" },
+              // ← Pending card only in monthly mode
+              ...(isMonthly
+                ? [{ label: "⏳ Pending", value: data.pendingCount, prev: prevData?.pendingCount, color: "border-danger" }]
+                : []
+              ),
             ].map(({ label, value, prev, color }) => (
               <div className="col-md-3" key={label}>
                 <div className={`card text-center p-3 ${color}`}>
@@ -190,7 +200,17 @@ function CollectionReport() {
             ))}
           </div>
 
-          {/* Detailed table with comparison */}
+          {/* Range mode notice */}
+          {!isMonthly && (
+            <div className="alert alert-info py-2 mb-3">
+              <small>
+                📌 <strong>Date Range mode</strong> shows payments physically recorded in this window.
+                Fee Expected, Balance and Pending counts are only available in Monthly mode.
+              </small>
+            </div>
+          )}
+
+          {/* Detailed table */}
           <table className="table table-bordered">
             <thead className="table-dark">
               <tr>
@@ -201,24 +221,30 @@ function CollectionReport() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>Total Fee Expected</td>
-                <td className="fw-bold">₹{data.totalFeeExpected}</td>
-                {prevData && <td>₹{prevData.totalFeeExpected}</td>}
-                {prevData && <td>{changeBadge(data.totalFeeExpected, prevData.totalFeeExpected)}</td>}
-              </tr>
+              {/* ← Only in monthly mode */}
+              {isMonthly && (
+                <tr>
+                  <td>Total Fee Expected</td>
+                  <td className="fw-bold">₹{data.totalFeeExpected}</td>
+                  {prevData && <td>₹{prevData.totalFeeExpected}</td>}
+                  {prevData && <td>{changeBadge(data.totalFeeExpected, prevData.totalFeeExpected)}</td>}
+                </tr>
+              )}
               <tr className="table-success">
                 <td>Total Collected</td>
                 <td className="fw-bold fs-5">₹{data.totalCollected}</td>
                 {prevData && <td>₹{prevData.totalCollected}</td>}
                 {prevData && <td>{changeBadge(data.totalCollected, prevData.totalCollected)}</td>}
               </tr>
-              <tr className="table-danger">
-                <td>Total Balance</td>
-                <td className="fw-bold">₹{data.totalBalance}</td>
-                {prevData && <td>₹{prevData.totalBalance}</td>}
-                {prevData && <td>{changeBadge(data.totalBalance, prevData.totalBalance)}</td>}
-              </tr>
+              {/* ← Only in monthly mode */}
+              {isMonthly && (
+                <tr className="table-danger">
+                  <td>Total Balance</td>
+                  <td className="fw-bold">₹{data.totalBalance}</td>
+                  {prevData && <td>₹{prevData.totalBalance}</td>}
+                  {prevData && <td>{changeBadge(data.totalBalance, prevData.totalBalance)}</td>}
+                </tr>
+              )}
               <tr>
                 <td>💵 Cash Collected</td>
                 <td className="fw-bold">₹{data.cashCollected}</td>
@@ -234,7 +260,7 @@ function CollectionReport() {
             </tbody>
           </table>
           {prevData && (
-            <small className="text-muted">▲ higher than previous month | ▼ lower than previous month</small>
+            <small className="text-muted">▲ higher than previous period | ▼ lower than previous period</small>
           )}
         </div>
       )}

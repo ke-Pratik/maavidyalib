@@ -371,7 +371,7 @@ public class FeeService {
         record.setBalanceAmount(newBalance);
         record.setPaymentStatus(newStatus);
         record.setPaymentMode(mode);
-        record.setPaymentDate(LocalDate.now());
+        record.setPaymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now());
         record.setReceiptNumber(receipt);
         if (request.getRemarks() != null) record.setRemarks(request.getRemarks());
         feeRecordRepository.save(record);
@@ -382,7 +382,7 @@ public class FeeService {
                 .receiptNumber(receipt).feeMonth(record.getFeeMonth()).feeYear(record.getFeeYear())
                 .finalFee(record.getFinalFee()).amountPaidNow(payAmount).totalPaidSoFar(newPaid)
                 .balanceRemaining(newBalance).paymentStatus(newStatus).paymentMode(mode)
-                .paymentDate(LocalDate.now().toString()).build();
+                .paymentDate(record.getPaymentDate().toString()).build();
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -662,7 +662,7 @@ public class FeeService {
             record.setBalanceAmount(newBalance);
             record.setPaymentStatus(newStatus);
             record.setPaymentMode(mode);
-            record.setPaymentDate(LocalDate.now());
+            record.setPaymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now());
             record.setReceiptNumber(receipt);
             feeRecordRepository.save(record);
 
@@ -681,7 +681,7 @@ public class FeeService {
                 .feeMonth(request.getFeeMonth()).feeYear(request.getFeeYear())
                 .paymentMode(mode).totalStudents(results.size())
                 .totalAmountCollected(totalCollected)
-                .paymentDate(LocalDate.now().toString())
+                .paymentDate((request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now()).toString())
                 .results(results).build();
     }
     // ── END ENHANCEMENT #5 ───────────────────────────────────────────────────

@@ -29,6 +29,7 @@ const formatDate = (iso) => {
 
 function FeePayment() {
   const now = new Date();
+  const today = now.toISOString().split("T")[0]; // ← NEW
 
   // STUDENT SEARCH
   const [studentSearchType, setStudentSearchType] = useState("name");
@@ -51,6 +52,7 @@ function FeePayment() {
     payAmount: "",
     paymentMode: "CASH",
     remarks: "",
+    paymentDate: today, // ← NEW: defaults to today
   });
   const [payLoading, setPayLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -173,6 +175,7 @@ function FeePayment() {
         payAmount: Number(form.payAmount),
         paymentMode: form.paymentMode,
         remarks: form.remarks || null,
+        paymentDate: form.paymentDate || null, // ← NEW
       };
       const res = await recordPayment(payload);
       setResult(res.data);
@@ -645,6 +648,19 @@ function FeePayment() {
                 <option value="ONLINE">💳 Online</option>
               </select>
             </div>
+            {/* ← NEW: Payment Date field */}
+            <div className="col-md-4">
+              <label className="form-label fw-bold">Payment Date *</label>
+              <input
+                type="date"
+                className="form-control"
+                value={form.paymentDate}
+                max={today}
+                onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
+                required
+              />
+              <small className="text-muted">Defaults to today. Change for backdated entries.</small>
+            </div>
             <div className="col-md-4">
               <label className="form-label fw-bold">Remarks</label>
               <input
@@ -711,7 +727,7 @@ function FeePayment() {
         </div>
       )}
 
-      {/* ─── ADVANCE PAYMENT MODAL — keep open after save ─── */}
+      {/* ─── ADVANCE PAYMENT MODAL ─── */}
       {showAdvance && selectedStudentInfo && (
         <AdvancePaymentModal
           student={selectedStudentInfo}
@@ -722,7 +738,7 @@ function FeePayment() {
         />
       )}
 
-      {/* ─── REVISE FEE MODAL — keep open after save ─── */}
+      {/* ─── REVISE FEE MODAL ─── */}
       {reviseTarget && (
         <ReviseFeeModal
           feeRecord={reviseTarget}
@@ -733,7 +749,7 @@ function FeePayment() {
         />
       )}
 
-      {/* ─── WALLET MODAL ───────────────────── */}
+      {/* ─── WALLET MODAL ─── */}
       {showWallet && selectedStudentInfo && (
         <WalletModal
           regNo={selectedStudentInfo.regNo}

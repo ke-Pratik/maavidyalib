@@ -38,4 +38,6 @@ public class BulkPaymentRequest {
         @NotNull
         private BigDecimal amount;  // can be partial or full balance
     }
+    
+    private LocalDate paymentDate;   // ← ADD THIS (optional, null = today)
 }
