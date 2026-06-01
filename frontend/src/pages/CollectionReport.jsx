@@ -54,11 +54,11 @@ function CollectionReport() {
       ["Report Period", data.period],
       [],
       ["Metric", "Current Period", prevData ? "Previous Period" : ""],
-      ["Total Students",     data.totalStudents,    prevData?.totalStudents    ?? ""],
-      ["Paid Count",         data.paidCount,        prevData?.paidCount        ?? ""],
-      ["Partial Count",      data.partialCount,     prevData?.partialCount     ?? ""],
-      // Only include Pending + Expected + Balance rows in monthly mode
+      // Student counts only in monthly mode
       ...(isMonthly ? [
+        ["Total Students",     data.totalStudents,    prevData?.totalStudents    ?? ""],
+        ["Paid Count",         data.paidCount,        prevData?.paidCount        ?? ""],
+        ["Partial Count",      data.partialCount,     prevData?.partialCount     ?? ""],
         ["Pending Count",      data.pendingCount,     prevData?.pendingCount     ?? ""],
         ["Total Fee Expected", data.totalFeeExpected, prevData?.totalFeeExpected ?? ""],
       ] : []),
@@ -174,38 +174,36 @@ function CollectionReport() {
             </button>
           </div>
 
-          {/* Summary cards */}
-          <div className="row g-3 mb-4">
-            {[
-              { label: "Total Students", value: data.totalStudents, prev: prevData?.totalStudents, color: "" },
-              { label: "✅ Paid",        value: data.paidCount,     prev: prevData?.paidCount,     color: "border-success" },
-              { label: "🔶 Partial",     value: data.partialCount,  prev: prevData?.partialCount,  color: "border-warning" },
-              // ← Pending card only in monthly mode
-              ...(isMonthly
-                ? [{ label: "⏳ Pending", value: data.pendingCount, prev: prevData?.pendingCount, color: "border-danger" }]
-                : []
-              ),
-            ].map(({ label, value, prev, color }) => (
-              <div className="col-md-3" key={label}>
-                <div className={`card text-center p-3 ${color}`}>
-                  <h4>{value}</h4>
-                  {prev != null && (
-                    <div className="small text-muted">
-                      prev: {prev} {changeBadge(value, prev)}
-                    </div>
-                  )}
-                  <small>{label}</small>
+          {/* Summary cards — Monthly mode only */}
+          {isMonthly && (
+            <div className="row g-3 mb-4">
+              {[
+                { label: "Total Students", value: data.totalStudents, prev: prevData?.totalStudents, color: "" },
+                { label: "✅ Paid",        value: data.paidCount,     prev: prevData?.paidCount,     color: "border-success" },
+                { label: "🔶 Partial",     value: data.partialCount,  prev: prevData?.partialCount,  color: "border-warning" },
+                { label: "⏳ Pending",     value: data.pendingCount,  prev: prevData?.pendingCount,  color: "border-danger" },
+              ].map(({ label, value, prev, color }) => (
+                <div className="col-md-3" key={label}>
+                  <div className={`card text-center p-3 ${color}`}>
+                    <h4>{value}</h4>
+                    {prev != null && (
+                      <div className="small text-muted">
+                        prev: {prev} {changeBadge(value, prev)}
+                      </div>
+                    )}
+                    <small>{label}</small>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Range mode notice */}
           {!isMonthly && (
             <div className="alert alert-info py-2 mb-3">
               <small>
                 📌 <strong>Date Range mode</strong> shows payments physically recorded in this window.
-                Fee Expected, Balance and Pending counts are only available in Monthly mode.
+                Student counts, Fee Expected and Balance are only available in Monthly mode.
               </small>
             </div>
           )}
@@ -221,7 +219,6 @@ function CollectionReport() {
               </tr>
             </thead>
             <tbody>
-              {/* ← Only in monthly mode */}
               {isMonthly && (
                 <tr>
                   <td>Total Fee Expected</td>
@@ -236,7 +233,6 @@ function CollectionReport() {
                 {prevData && <td>₹{prevData.totalCollected}</td>}
                 {prevData && <td>{changeBadge(data.totalCollected, prevData.totalCollected)}</td>}
               </tr>
-              {/* ← Only in monthly mode */}
               {isMonthly && (
                 <tr className="table-danger">
                   <td>Total Balance</td>
