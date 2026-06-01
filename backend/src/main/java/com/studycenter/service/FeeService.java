@@ -662,7 +662,7 @@ public class FeeService {
             record.setBalanceAmount(newBalance);
             record.setPaymentStatus(newStatus);
             record.setPaymentMode(mode);
-            fr.setPaymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now());
+            record.setPaymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now());
             record.setReceiptNumber(receipt);
             feeRecordRepository.save(record);
 
@@ -681,7 +681,7 @@ public class FeeService {
                 .feeMonth(request.getFeeMonth()).feeYear(request.getFeeYear())
                 .paymentMode(mode).totalStudents(results.size())
                 .totalAmountCollected(totalCollected)
-                .paymentDate(LocalDate.now().toString())
+                .paymentDate((request.getPaymentDate() != null ? request.getPaymentDate() : LocalDate.now()).toString())
                 .results(results).build();
     }
     // ── END ENHANCEMENT #5 ───────────────────────────────────────────────────
