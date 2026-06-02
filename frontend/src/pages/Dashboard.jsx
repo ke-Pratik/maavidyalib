@@ -16,12 +16,15 @@ const SEAT_COLORS    = ["#dc3545", "#198754"];
 const PAYMENT_COLORS = ["#198754", "#0d6efd"];
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
+const pad = (n) => String(n).padStart(2, "0");
 
 function Dashboard() {
   const now          = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear  = now.getFullYear();
-  const todayStr     = now.toISOString().split("T")[0];
+  // FIX: use LOCAL date (IST), not UTC. toISOString() returns UTC and
+  // would roll back to the previous day between midnight and 5:30 AM IST.
+  const todayStr     = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
   const [students,     setStudents]     = useState({});
   const [seats,        setSeats]        = useState({});
@@ -230,7 +233,7 @@ function Dashboard() {
                     </div>
                     {Number(collection.oldDuesRecovered || 0) > 0 && (
                       <div className="text-warning" style={{ fontSize: "11px" }}>
-                        +₹{fmt(collection.oldDuesRecovered)} backlog
+                        incl. ₹{fmt(collection.oldDuesRecovered)} from prev. months
                       </div>
                     )}
                   </div>
@@ -245,7 +248,7 @@ function Dashboard() {
                     </div>
                     {Number(collection.priorMonthDues || 0) > 0 && (
                       <div className="text-danger" style={{ fontSize: "11px" }}>
-                        +₹{fmt(collection.priorMonthDues)} backlog
+                        incl. ₹{fmt(collection.priorMonthDues)} from prev. months
                       </div>
                     )}
                   </div>
