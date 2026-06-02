@@ -61,12 +61,13 @@ public interface FeeRecordRepository extends JpaRepository<FeeRecord, Long> {
                                           @Param("month") int month,
                                           @Param("year")  int year);
 
-    // Backlog Collected: payments made in this month for fees of previous months
+
+// ✅ FIXED — works on both PostgreSQL and MySQL (Hibernate 6 / Spring Boot 3.x)
 @Query("SELECT COALESCE(SUM(f.paidAmount), 0) FROM FeeRecord f " +
-       "WHERE FUNCTION('MONTH', f.paymentDate) = :month " +
-       "AND FUNCTION('YEAR', f.paymentDate) = :year " +
-       "AND (f.feeYear < :year OR (f.feeYear = :year AND f.feeMonth < :month))")
-BigDecimal sumOldDuesRecoveredInMonth(@Param("month") int month, @Param("year") int year);
+   "WHERE EXTRACT(MONTH FROM f.paymentDate) = :month " +
+   "AND EXTRACT(YEAR FROM f.paymentDate) = :year " +
+   "AND (f.feeYear < :year OR (f.feeYear = :year AND f.feeMonth < :month))")
+BigDecimal sumOldDuesRecoveredInMonth(@Param("month") int month, @Param("year") int year);    
 
 // Backlog Pending: outstanding balance for active students in months BEFORE this month
 @Query("SELECT COALESCE(SUM(f.balanceAmount), 0) FROM FeeRecord f " +
