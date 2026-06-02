@@ -184,7 +184,7 @@ function Dashboard() {
                 ₹{fmt(todayData.totalCollected)}
               </h3>
               <small className="text-muted">
-                {todayData.totalStudents || 0} receipt(s) today
+                {todayData.totalStudents || 0} receipt(s) on {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
               </small>
               {Number(todayData.totalCollected || 0) > 0 && (
                 <div className="mt-2 small">
